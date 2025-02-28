@@ -4,11 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='styling.css') }}">
-    <title>Okey Game</title>
+    <title>Tay Depti</title>
     <style>
-        .tile {
-            cursor: pointer;
-        }
+       
+        .tile[data-color="red"] { color: red; }
+        .tile[data-color="blue"] { color: blue; }
+        .tile[data-color="black"] { color: black; }
+        .tile[data-color="yellow"] { color: yellow; }
+        .tile[data-color="joker"] { color: green; }
+      
     </style>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 </head>
@@ -19,7 +23,7 @@
         <div class="box bottom-center">
             <ul class="tiles" id="sortable-tiles">
                 {% for tile in starting_tiles %}
-                <li class="tile" style="color:{{tile.color}}; text-align: center;" draggable="true">{{tile.number}}</li>
+                <li class="tile" data-color="{{tile.color}}" draggable="true">{{tile.number}}</li>
                 {% endfor %}
             </ul>
         </div>
@@ -30,20 +34,41 @@
         <div class="box drop-northwest" ondrop="drop(event, 'northwest')" ondragover="allowDrop(event)"></div>
         <div class="box drop-southwest" ondrop="drop(event, 'southwest')" ondragover="allowDrop(event)"></div>
         <div class="box ground-tiles">
-            <li class="tile" style="text-align: center;" draggable="false">
+            <div class="tile" style="text-align: center;" draggable="false">
                 {{ground_tiles|length}}
-            </li>
+            </div>
         </div>
         <div class="box okey-tile">
-            <li class="tile" style="color:{{okey_tile.color}}; text-align: center;" draggable="false">{{okey_tile.number}}</li>
+            <div class="tile" data-color="{{okey_tile.color}}" draggable="false">{{okey_tile.number}}</div>
         </div>
     </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        let isPlayerTurn = true;
+        let canDrawTile = true; // Taş çekme hakkı kontrolü
         const tiles = document.querySelectorAll('.tile');
         const dropZones = document.querySelectorAll('.box.drop-southeast, .box.drop-northeast, .box.drop-northwest, .box.drop-southwest');
+        const bottomCenter = document.querySelector('.box.bottom-center');
+        const groundTiles = document.querySelector('.box.ground-tiles');
+        let perCount = 0;
+
+        // Tüm taşları sürüklenebilir yap
+        function makeAllTilesDraggable() {
+            document.querySelectorAll('.tile').forEach(tile => {
+                tile.draggable = true;
+                tile.addEventListener('dragstart', dragStart);
+            });
+        }
+
+        // Southwest'teki taşları sürüklenebilir yap
+        function makeSouthwestTilesDraggable() {
+            document.querySelectorAll('.box.drop-southwest .tile').forEach(tile => {
+                tile.draggable = true;
+                tile.addEventListener('dragstart', dragStart);
+            });
+        }
 
         tiles.forEach(tile => {
             tile.addEventListener('dragstart', dragStart);
@@ -54,18 +79,101 @@
             dropZone.addEventListener('drop', dragDrop);
         });
 
+        // Bottom-center'ı drop zone yap
+        bottomCenter.addEventListener('dragover', allowDrop);
+        bottomCenter.addEventListener('drop', function(e) {
+            e.preventDefault();
+            const draggedTile = document.querySelector('.dragging');
+            const sourceZone = draggedTile.parentElement;
+            
+            // Sadece southwest'ten gelen taşları kabul et
+            if (sourceZone.classList.contains('drop-southwest')) {
+                const tilesList = document.querySelector('#sortable-tiles');
+                const newTile = document.createElement('li');
+                newTile.className = 'tile';
+                newTile.draggable = true;
+                newTile.dataset.color = draggedTile.dataset.color;
+                newTile.textContent = draggedTile.textContent;
+                newTile.style.color = draggedTile.style.color;
+                
+                tilesList.appendChild(newTile);
+                draggedTile.remove();
+                
+                makeAllTilesDraggable();
+                checkPer();
+            }
+        });
+
+        // Ground tiles'a tıklama olayı ekle
+        groundTiles.addEventListener('click', function() {
+            if (!isPlayerTurn) {
+                alert('Sıra sizde değil! Lütfen bekleyin.');
+                return;
+            }
+            if (!canDrawTile) {
+                alert('Önce elinizden bir taş atmalısınız!');
+                return;
+            }
+
+            // Sunucudan yeni taş iste
+            fetch('/draw_tile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.tile) {
+                    // Yeni taşı ele ekle
+                    const tilesList = document.querySelector('#sortable-tiles');
+                    const newTile = document.createElement('li');
+                    newTile.className = 'tile';
+                    newTile.draggable = true;
+                    newTile.dataset.color = data.tile.color;
+                    newTile.textContent = data.tile.number;
+                    newTile.style.color = data.tile.color;
+                    tilesList.appendChild(newTile);
+
+                    // Ground tiles sayısını güncelle
+                    const groundTileCount = document.querySelector('.box.ground-tiles .tile');
+                    groundTileCount.textContent = data.remaining_tiles;
+
+                    // Taş çekme hakkını kaldır
+                    canDrawTile = false;
+                    makeAllTilesDraggable();
+                    checkPer();
+                }
+            });
+        });
+
         function dragStart(e) {
+            if (!isPlayerTurn && !e.target.closest('.box.drop-southwest')) {
+                e.preventDefault();
+                alert('Sıra sizde değil! Lütfen bekleyin.');
+                return;
+            }
             e.dataTransfer.setData('text/plain', e.target.innerHTML);
-            e.dataTransfer.setData('text/color', e.target.style.color);
+            e.dataTransfer.setData('text/color', e.target.dataset.color);
             e.dataTransfer.setData('text/index', Array.from(e.target.parentNode.children).indexOf(e.target));
             e.target.classList.add('dragging');
         }
 
         function allowDrop(e) {
+            if (!isPlayerTurn) {
+                e.preventDefault();
+                return;
+            }
             e.preventDefault();
         }
 
         function dragDrop(e) {
+            if (!isPlayerTurn) {
+                e.preventDefault();
+                alert('Sıra sizde değil! Lütfen bekleyin.');
+                return;
+            }
+
             e.preventDefault();
             const draggedTile = document.querySelector('.dragging');
             const newOwner = e.target.classList.contains('box') ? e.target : e.target.parentNode;
@@ -78,8 +186,68 @@
             draggedTile.classList.remove('dragging');
             draggedTile.innerHTML = tileNumber;
             draggedTile.style.color = tileColor;
+            draggedTile.dataset.color = tileColor;
 
             updateTilesList(newOwner);
+
+            if (newOwner.classList.contains('drop-southeast')) {
+                isPlayerTurn = false; // Oyuncu sırasını kapat
+                canDrawTile = true; // Bir sonraki tur için taş çekme hakkını geri ver
+                makeBotMove('southeast', tileNumber, tileColor);
+            }
+        }
+
+        function makeBotMove(position, tileNumber, tileColor) {
+            fetch('/bot_move', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    tile: {
+                        number: tileNumber,
+                        color: tileColor
+                    },
+                    position: position
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.move) {
+                    const botTile = document.createElement('div');
+                    botTile.className = 'tile';
+                    botTile.dataset.color = data.move.color;
+                    botTile.textContent = data.move.number;
+
+                    let nextPosition;
+                    switch(position) {
+                        case 'southeast':
+                            nextPosition = 'northeast';
+                            break;
+                        case 'northeast':
+                            nextPosition = 'northwest';
+                            break;
+                        case 'northwest':
+                            nextPosition = 'southwest';
+                            break;
+                    }
+
+                    const targetBox = document.querySelector(`.box.drop-${nextPosition}`);
+                    targetBox.appendChild(botTile);
+
+                    if (nextPosition !== 'southwest') {
+                        setTimeout(() => {
+                            makeBotMove(nextPosition, data.move.number, data.move.color);
+                        }, 1000);
+                    } else {
+                        setTimeout(() => {
+                            isPlayerTurn = true;
+                            canDrawTile = true; // Yeni turda taş çekme hakkı ver
+                            makeSouthwestTilesDraggable();
+                        }, 10);
+                    }
+                }
+            });
         }
 
         function updateTilesList(container) {
