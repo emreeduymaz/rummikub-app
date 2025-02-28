@@ -1,0 +1,123 @@
+body {
+    padding: 0px;
+    margin: 0px;
+    box-sizing: border-box;
+}
+
+.yesil{
+    padding: 10px;
+    background-color: green;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+}
+
+.mavi {
+    width: 1080px;
+    height: 720px;
+    background-color: rgb(0, 145, 255);
+    display: flex; /* Altındakilere hareket etmesi için olanak sağlar */
+    justify-content: space-between; /* X düzlemi center alırsan x düzleminde hareket eder.*/
+     /* X düzlemi center alırsan x düzleminde hareket eder. */
+    flex-direction: column;
+    position: relative; /* iki kutuya da emir verip sütuna göre dizdi X ile Y düzleminin yerini değiştirir*/
+    padding: 10px;
+}
+
+.box {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    background-color: rgba(255, 255, 255, 0.5); /* Beyaz, %50 saydamlıkta */
+  }
+  
+.top-center{
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 100%;
+}
+  
+.bottom-center{
+    width: 750px;
+    height: 180px;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: orange;
+    display: flex;
+
+}
+  
+.right-center{
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    border-radius: 100%;
+}
+  
+.left-center{
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    border-radius: 100%;
+}
+.drop-southeast{
+    width: 50px;
+    height: 70px;
+    bottom: 25%;
+    right: 10%;
+    transform: translateX(-50%);
+}
+  
+.drop-southwest{
+    width: 50px;
+    height: 70px;
+    bottom: 25%;
+    left: 15%;
+    transform: translateX(-50%);
+}
+  
+.drop-northeast{
+    width: 50px;
+    height: 70px;
+    top: 20%;
+    right: 12.5%;
+    transform: translateY(-50%);
+}
+  
+.drop-northwest{
+    width: 50px;
+    height: 70px;
+    top: 20%;
+    left: 12.5%;
+    transform: translateY(-50%);
+}
+.ground-tiles{
+    width: 50px;
+    height: 70px;
+    top: 50%;
+    right: 20%;
+    transform: translateY(-50%);
+}
+
+.okey-tile{
+    width: 50px;
+    height: 70px;
+    top: 50%;
+    right: 25%;
+    transform: translateY(-50%);
+}
+.tiles{
+    position: relative;
+    padding-left: 20px;
+    display: inline-block;
+}
+.tile{
+    background-color: white;
+    width: 50px;
+    height: 70px;
+    border: 2px solid #000;
+    display: inline-block;
+    float: left;
+}
